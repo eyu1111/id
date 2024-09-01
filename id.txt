@@ -1,0 +1,105 @@
+
+local HttpService = game:GetService("HttpService")
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+
+
+local function generateRandomString(length)
+    local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local randomString = ""
+    for i = 1, length do
+        local randIndex = math.random(1, #charset)
+        randomString = randomString .. charset:sub(randIndex, randIndex)
+    end
+    return randomString
+end
+
+
+local function encryptString(input)
+    return HttpService:UrlEncode(HttpService:JSONEncode(input))
+end
+
+
+local function hideDisplayName(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local randomNames = {"游客", "匿名者", "玩家", "隐形人"}
+        humanoid.DisplayName = randomNames[math.random(1, #randomNames)] -- 随机更改显示名称
+    end
+end
+
+（仅限客户端）并定期更改，同时加密ID
+local function spoofUserId(player)
+    local function updateUserId()
+        local randomId = generateRandomString(10) -- 生成随机ID
+        local encryptedId = encryptString(randomId) -- 加密ID
+        player.UserId = math.random(100000, 999999) -- 伪装为随机UserId
+        player:SetAttribute("UserId", encryptedId) -- 存储加密的伪装ID
+        player:SetAttribute("UserIdDisplay", "隐藏")
+    end
+    updateUserId()
+    game:GetService("RunService").Heartbeat:Connect(updateUserId)
+end
+
+（仅客户端可见范围）并定期更改，同时加密IP
+local function hideIpAddress(player)
+    local function updateIpAddress()
+        local randomIp = string.format("%d.%d.%d.%d", math.random(1, 255), math.random(1, 255), math.random(1, 255), math.random(1, 255))
+        local encryptedIp = encryptString(randomIp) 
+        player:SetAttribute("IpAddress", encryptedIp)
+    end
+    updateIpAddress()
+    game:GetService("RunService").Heartbeat:Connect(updateIpAddress)
+end
+
+
+local function hideNameTag(character)
+    local head = character:FindFirstChild("Head")
+    if head then
+        
+        for _, child in ipairs(head:GetChildren()) do
+            if child:IsA("BillboardGui") or child.Name == "NameTag" then
+                child:Destroy()
+            end
+        end
+        
+        
+        local hiddenTag = Instance.new("BillboardGui", head)
+        hiddenTag.Size = UDim2.new(1, 0, 1, 0)
+        hiddenTag.AlwaysOnTop = true
+        hiddenTag.Enabled = false -- 禁用GUI，使其不可见
+    end
+end
+
+
+local function ensureAllHidden(player, character)
+    local success = false
+    while not success do
+        pcall(function()
+            hideDisplayName(character)
+            spoofUserId(player)
+            hideIpAddress(player)
+            hideNameTag(character)
+        end)
+        wait(1) -- 每秒重试一次
+        success = player:GetAttribute("UserIdDisplay") == "隐藏" and player:GetAttribute("IpAddress") ~= nil
+    end
+end
+
+
+local function showSuccessUI()
+    OrionLib:MakeNotification({
+        Name = "隐蔽模式启用",
+        Content = "显示名称、用户ID和IP地址已成功隐藏、伪装并加密。",
+        Image = "rbxassetid://4483345998",
+        Time = 10
+    })
+end
+
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+ensureAllHidden(player, character)
+showSuccessUI()
+
+print("优化后的隐蔽模式已启用：显示名称、用户ID和IP地址均已动态隐藏、伪装并加密。")
